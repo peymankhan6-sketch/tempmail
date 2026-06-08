@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TempMail | سرویس پیشرفته ایمیل موقت</title>
+    <style>
+        :root {
+            --accent-purple: #8b5cf6;
+            --accent-blue: #3b82f6;
+            --gradient-main: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-title: #ffffff;
+            --text-body: #cbd5e1;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            background: var(--gradient-main);
+            color: var(--text-body);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            overflow-x: hidden;
+        }
+
+        /* پس‌زمینه نئونی برای جلوه بیشتر */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(0,0,0,0) 70%);
+            top: -10%;
+            left: -10%;
+            z-index: 0;
+        }
+
+        .app-window {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 1100px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: grid;
+            grid-template-columns: 1.2fr 2fr;
+            overflow: hidden;
+        }
+
+        /* بخش سمت راست: مدیریت ایمیل */
+        .control-panel {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 40px;
+            border-left: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            text-align: right;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .brand-logo {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+        }
+
+        .brand-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-title);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: var(--text-title);
+            line-height: 1.4;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 35px;
+            line-height: 1.6;
+        }
+
+        .email-display-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        #email-address {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #58a6ff;
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-align: left;
+            direction: ltr;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        button {
+            flex: 1;
+            cursor: pointer;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+        }
+
+        .btn-copy {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-copy:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-refresh {
+            background: linear-gradient(135deg, var(--accent-purple), #6d28d9);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+        }
+
+        .btn-refresh:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        /* بخش سمت چپ: صندوق ورودی */
+        .inbox-panel {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            max-height: 650px;
+        }
+
+        .inbox-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .inbox-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-title);
+        }
+
+        .loader {
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        /* شخصی‌سازی اسکرول‌بار ورودی */
+        .messages-container::-webkit-scrollbar { width: 6px; }
+        .messages-container::-webkit-scrollbar-track { background: transparent; }
+        .messages-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .no-messages {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            gap: 15px;
+            font-style: italic;
+        }
+
+        .email-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .email-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(139, 92, 246, 0.3);
+            transform: scale(1.01);
+        }
+
+        .email-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+            direction: ltr;
+        }
+
+        .email-subject {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-title);
+            margin-bottom: 5px;
+        }
+
+        .email-preview-body {
+            font-size: 0.9rem;
+            color: var(--text-body);
+            white-space: pre-line;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            display: none;
+            line-height: 1.6;
+        }
+
+        /* پاپ آپ اعلان */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #10b981;
+            color: white;
+            padding: 16px 30px;
+            border-radius: 12px;
+            font-weight: bold;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* بهینه‌سازی ریسپانسیو برای موبایل */
+        @media (max-width: 850px) {
+            .app-window {
+                grid-template-columns: 1fr;
+            }
+            .control-panel {
+                border-left: none;
+                border-bottom: 1px solid var(--glass-border);
+                padding: 30px;
+            }
+            .inbox-panel {
+                max-height: 500px;
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-window">
+        
+        <div class="control-panel">
+            <div class="brand">
+                <div class="brand-logo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </div>
+                <span class="brand-title">TempMail</span>
+            </div>
+            
+            <h1>پروژه TempMail: سریع، امن و رایگان</h1>
+            <p class="subtitle">ایمیل‌های یک‌بار مصرف بسازید، حریم خصوصی خود را حفظ کنید و از شر هرزنامه‌ها و اسپم‌ها خلاص شوید.</p>
+            
+            <div class="email-display-container">
+                <input type="text" id="email-address" value="در حال مقداردهی اولیه..." readonly>
+                <div class="button-group">
+                    <button class="btn-copy" onclick="copyEmail()">
+                        <span>کپی کردن</span>
+                    </button>
+                    <button class="btn-refresh" onclick="generateNewEmail()">
+                        <span>ایمیل جدید</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="inbox-panel">
+            <div class="inbox-header">
+                <span class="inbox-title">ایمیل‌های دریافتی</span>
+                <div class="loader" id="loader"></div>
+            </div>
+            
+            <div class="messages-container" id="messages-container">
+                <div class="no-messages">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline></svg>
+                    <span>در انتظار دریافت اولین ایمیل... (بررسی خودکار هر ۱۰ ثانیه)</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="toast" id="toast">آدرس ایمیل با موفقیت کپی شد!</div>
+
+    <script>
+        let currentEmail = '';
+        let login = '';
+        let domain = '';
+        let checkInterval = null;
+
+        window.onload = () => {
+            generateNewEmail();
+            // هر 10 ثانیه چک میکند
+            checkInterval = setInterval(checkMessages, 10000);
+        };
+
+        async function generateNewEmail() {
+            const mailInput = document.getElementById('email-address');
+            mailInput.value = "در حال ایجاد...";
+            document.getElementById('messages-container').innerHTML = `
+                <div class="no-messages">
+                    <div class="loader" style="display:block; margin-bottom:10px;"></div>
+                    <span>در حال آماده‌سازی صندوق ورودی جدید...</span>
+                </div>`;
+            
+            try {
+                const response = await fetch('https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1');
+                const data = await response.json();
+                currentEmail = data[0];
+                mailInput.value = currentEmail;
+                
+                const parts = currentEmail.split('@');
+                login = parts[0];
+                domain = parts[1];
+                
+                checkMessages();
+            } catch (error) {
+                mailInput.value = "خطا در برقراری ارتباط با سرور";
+            }
+        }
+
+        function copyEmail() {
+            const emailInput = document.getElementById('email-address');
+            if(emailInput.value && !emailInput.value.includes("...")) {
+                navigator.clipboard.writeText(emailInput.value);
+                const toast = document.getElementById('toast');
+                toast.classList.add('show');
+                setTimeout(() => { toast.classList.remove('show'); }, 3000);
+            }
+        }
+
+        async function checkMessages() {
+            if (!login || !domain) return;
+            
+            const loader = document.getElementById('loader');
+            loader.style.display = 'block';
+
+            try {
+                const response = await fetch(`https://www.1secmail.com/api/v1/?action=getMessages&login=${login}&domain=${domain}`);
+                const messages = await response.json();
+                const container = document.getElementById('messages-container');
+                
+                if (messages.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-messages">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline></svg>
+                            <span>صندوق ورودی خالی است. منتظر دریافت پیام جدید...</span>
+                        </div>`;
+                } else {
+                    container.innerHTML = '';
+                    messages.forEach(msg => {
+                        const card = document.createElement('div');
+                        card.className = 'email-card';
+                        card.innerHTML = `
+                            <div class="email-meta">
+                                <span>From: ${msg.from}</span>
+                                <span>ID: ${msg.id}</span>
+                            </div>
+                            <div class="email-subject">${msg.subject ? msg.subject : '(بدون موضوع)'}</div>
+                            <div class="email-preview-body" id="body-${msg.id}">در حال بارگذاری محتوای ایمیل...</div>
+                        `;
+                        card.onclick = () => loadEmailContent(msg.id);
+                        container.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                console.error("خطا در به‌روزرسانی پیام‌ها", error);
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        async function loadEmailContent(id) {
+            const bodyDiv = document.getElementById(`body-${id}`);
+            
+            if (bodyDiv.style.display === 'block') {
+                bodyDiv.style.display = 'none';
+                return;
+            }
+
+            bodyDiv.style.display = 'block';
+            
+            if (bodyDiv.innerText === "در حال بارگذاری محتوای ایمیل...") {
+                try {
+                    const response = await fetch(`https://www.1secmail.com/api/v1/?action=readMessage&login=${login}&domain=${domain}&id=${id}`);
+                    const data = await response.json();
+                    bodyDiv.innerHTML = data.textBody ? data.textBody : data.htmlBody;
+                } catch (error) {
+                    bodyDiv.innerText = "متاسفانه خطایی در دریافت متن ایمیل رخ داد.";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
