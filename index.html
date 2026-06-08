@@ -361,114 +361,121 @@
 
     <div class="toast" id="toast">آدرس ایمیل با موفقیت کپی شد!</div>
 
-    <script>
-        let currentEmail = '';
-        let login = '';
-        let domain = '';
-        let checkInterval = null;
+<script>
+    let currentEmail = '';
+    let login = '';
+    let domain = '';
+    let checkInterval = null;
 
-        window.onload = () => {
-            generateNewEmail();
-            // هر 10 ثانیه چک میکند
-            checkInterval = setInterval(checkMessages, 10000);
-        };
+    // تعریف آدرس پروکسی برای دور زدن تحریم و محدودیت مرورگر
+    const proxy = "https://corsproxy.io/?";
+    const apiBase = "https://www.1secmail.com/api/v1/";
 
-        async function generateNewEmail() {
-            const mailInput = document.getElementById('email-address');
-            mailInput.value = "در حال ایجاد...";
-            document.getElementById('messages-container').innerHTML = `
-                <div class="no-messages">
-                    <div class="loader" style="display:block; margin-bottom:10px;"></div>
-                    <span>در حال آماده‌سازی صندوق ورودی جدید...</span>
-                </div>`;
+    window.onload = () => {
+        generateNewEmail();
+        checkInterval = setInterval(checkMessages, 10000);
+    };
+
+    async function generateNewEmail() {
+        const mailInput = document.getElementById('email-address');
+        mailInput.value = "در حال ایجاد...";
+        document.getElementById('messages-container').innerHTML = `
+            <div class="no-messages">
+                <div class="loader" style="display:block; margin-bottom:10px;"></div>
+                <span>در حال آماده‌سازی صندوق ورودی جدید...</span>
+            </div>`;
+        
+        try {
+            // اضافه کردن پروکسی قبل از لینک اصلی
+            const response = await fetch(`${proxy}${apiBase}?action=genRandomMailbox&count=1`);
+            const data = await response.json();
+            currentEmail = data[0];
+            mailInput.value = currentEmail;
             
+            const parts = currentEmail.split('@');
+            login = parts[0];
+            domain = parts[1];
+            
+            checkMessages();
+        } catch (error) {
+            mailInput.value = "خطا در برقراری ارتباط با سرور";
+            console.error(error);
+        }
+    }
+
+    function copyEmail() {
+        const emailInput = document.getElementById('email-address');
+        if(emailInput.value && !emailInput.value.includes("...")) {
+            navigator.clipboard.writeText(emailInput.value);
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        }
+    }
+
+    async function checkMessages() {
+        if (!login || !domain) return;
+        
+        const loader = document.getElementById('loader');
+        loader.style.display = 'block';
+
+        try {
+            // اضافه کردن پروکسی قبل از لینک اصلی
+            const response = await fetch(`${proxy}${apiBase}?action=getMessages&login=${login}&domain=${domain}`);
+            const messages = await response.json();
+            const container = document.getElementById('messages-container');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="no-messages">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline></svg>
+                        <span>صندوق ورودی خالی است. منتظر دریافت پیام جدید...</span>
+                    </div>`;
+            } else {
+                container.innerHTML = '';
+                messages.forEach(msg => {
+                    const card = document.createElement('div');
+                    card.className = 'email-card';
+                    card.innerHTML = `
+                        <div class="email-meta">
+                            <span>From: ${msg.from}</span>
+                            <span>ID: ${msg.id}</span>
+                        </div>
+                        <div class="email-subject">${msg.subject ? msg.subject : '(بدون موضوع)'}</div>
+                        <div class="email-preview-body" id="body-${msg.id}">در حال بارگذاری محتوای ایمیل...</div>
+                    `;
+                    card.onclick = () => loadEmailContent(msg.id);
+                    container.appendChild(card);
+                });
+            }
+        } catch (error) {
+            console.error("خطا در به‌روزرسانی پیام‌ها", error);
+        } finally {
+            loader.style.display = 'none';
+        }
+    }
+
+    async function loadEmailContent(id) {
+        const bodyDiv = document.getElementById(`body-${id}`);
+        
+        if (bodyDiv.style.display === 'block') {
+            bodyDiv.style.display = 'none';
+            return;
+        }
+
+        bodyDiv.style.display = 'block';
+        
+        if (bodyDiv.innerText === "در حال بارگذاری محتوای ایمیل...") {
             try {
-                const response = await fetch('https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1');
+                // اضافه کردن پروکسی قبل از لینک اصلی
+                const response = await fetch(`${proxy}${apiBase}?action=readMessage&login=${login}&domain=${domain}&id=${id}`);
                 const data = await response.json();
-                currentEmail = data[0];
-                mailInput.value = currentEmail;
-                
-                const parts = currentEmail.split('@');
-                login = parts[0];
-                domain = parts[1];
-                
-                checkMessages();
+                bodyDiv.innerHTML = data.textBody ? data.textBody : data.htmlBody;
             } catch (error) {
-                mailInput.value = "خطا در برقراری ارتباط با سرور";
+                bodyDiv.innerText = "متاسفانه خطایی در دریافت متن ایمیل رخ داد.";
             }
         }
-
-        function copyEmail() {
-            const emailInput = document.getElementById('email-address');
-            if(emailInput.value && !emailInput.value.includes("...")) {
-                navigator.clipboard.writeText(emailInput.value);
-                const toast = document.getElementById('toast');
-                toast.classList.add('show');
-                setTimeout(() => { toast.classList.remove('show'); }, 3000);
-            }
-        }
-
-        async function checkMessages() {
-            if (!login || !domain) return;
-            
-            const loader = document.getElementById('loader');
-            loader.style.display = 'block';
-
-            try {
-                const response = await fetch(`https://www.1secmail.com/api/v1/?action=getMessages&login=${login}&domain=${domain}`);
-                const messages = await response.json();
-                const container = document.getElementById('messages-container');
-                
-                if (messages.length === 0) {
-                    container.innerHTML = `
-                        <div class="no-messages">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline></svg>
-                            <span>صندوق ورودی خالی است. منتظر دریافت پیام جدید...</span>
-                        </div>`;
-                } else {
-                    container.innerHTML = '';
-                    messages.forEach(msg => {
-                        const card = document.createElement('div');
-                        card.className = 'email-card';
-                        card.innerHTML = `
-                            <div class="email-meta">
-                                <span>From: ${msg.from}</span>
-                                <span>ID: ${msg.id}</span>
-                            </div>
-                            <div class="email-subject">${msg.subject ? msg.subject : '(بدون موضوع)'}</div>
-                            <div class="email-preview-body" id="body-${msg.id}">در حال بارگذاری محتوای ایمیل...</div>
-                        `;
-                        card.onclick = () => loadEmailContent(msg.id);
-                        container.appendChild(card);
-                    });
-                }
-            } catch (error) {
-                console.error("خطا در به‌روزرسانی پیام‌ها", error);
-            } finally {
-                loader.style.display = 'none';
-            }
-        }
-
-        async function loadEmailContent(id) {
-            const bodyDiv = document.getElementById(`body-${id}`);
-            
-            if (bodyDiv.style.display === 'block') {
-                bodyDiv.style.display = 'none';
-                return;
-            }
-
-            bodyDiv.style.display = 'block';
-            
-            if (bodyDiv.innerText === "در حال بارگذاری محتوای ایمیل...") {
-                try {
-                    const response = await fetch(`https://www.1secmail.com/api/v1/?action=readMessage&login=${login}&domain=${domain}&id=${id}`);
-                    const data = await response.json();
-                    bodyDiv.innerHTML = data.textBody ? data.textBody : data.htmlBody;
-                } catch (error) {
-                    bodyDiv.innerText = "متاسفانه خطایی در دریافت متن ایمیل رخ داد.";
-                }
-            }
-        }
-    </script>
+    }
+</script>
 </body>
 </html>
